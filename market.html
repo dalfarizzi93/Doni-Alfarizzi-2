@@ -1,0 +1,183 @@
+// DATA MASTER
+        let products = [
+            { id: 1, name: "Midnight Rose", price: 150000, cat: "Wanita", stock: 12, img: "🌹" },
+            { id: 2, name: "Blue Ocean", price: 175000, cat: "Pria", stock: 8, img: "🌊" },
+            { id: 3, name: "Vanilla Sky", price: 125000, cat: "Wanita", stock: 20, img: "🍦" },
+            { id: 4, name: "Dark Coffee", price: 210000, cat: "Unisex", stock: 5, img: "☕" }
+        ];
+
+        let cart = [];
+
+        // FUNGSI LOGIN (Hanya dipicu saat klik Admin)
+        function login() {
+            const user = document.getElementById('username').value.trim();
+            if(!user) return alert("Masukkan username!");
+            
+            if(user.toLowerCase() === 'admin') {
+                document.getElementById('nav-admin').classList.remove('hidden');
+                document.getElementById('login-modal').classList.add('hidden');
+                showPage('admin');
+                alert("Akses Admin Diterima.");
+            } else {
+                alert("Username salah! Hanya admin yang bisa masuk.");
+            }
+            renderAll();
+        }
+
+        // Tampilkan modal login hanya jika ingin ke halaman admin
+        function showPage(page) {
+            if(page === 'admin' && document.getElementById('nav-admin').classList.contains('hidden')) {
+                document.getElementById('login-modal').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('user-page').classList.add('hidden');
+            document.getElementById('admin-page').classList.add('hidden');
+            document.getElementById(page + '-page').classList.remove('hidden');
+        }
+
+        function logout() {
+            location.reload(); 
+        }
+
+        // ADMIN EDIT FUNCTIONS
+        function updateStock(id, amount) {
+            const product = products.find(p => p.id === id);
+            if (product.stock + amount < 0) return;
+            product.stock += amount;
+            renderAll();
+        }
+
+        function updatePrice(id, newPrice) {
+            const product = products.find(p => p.id === id);
+            product.price = parseInt(newPrice) || 0;
+            renderAll();
+        }
+
+        function updateName(id, newName) {
+            const product = products.find(p => p.id === id);
+            product.name = newName;
+            renderAll();
+        }
+
+        // RENDER ENGINE
+        function renderAll() {
+            renderUserProducts();
+            renderAdminTable();
+        }
+
+        function renderUserProducts() {
+            const container = document.getElementById('product-list');
+            container.innerHTML = products.map(p => `
+                <div class="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
+                    <div class="h-40 bg-gray-50 rounded-2xl mb-6 flex items-center justify-center text-7xl group-hover:scale-110 transition-transform">${p.img}</div>
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="text-indigo-600 text-[10px] font-bold uppercase tracking-widest">${p.cat}</p>
+                            <h4 class="text-xl font-bold text-gray-800">${p.name}</h4>
+                        </div>
+                        <span class="text-xs font-bold ${p.stock <= 5 ? 'text-red-500' : 'text-green-500'}">Stok: ${p.stock}</span>
+                    </div>
+                    <p class="text-gray-400 font-medium mb-6">Rp ${p.price.toLocaleString('id-ID')}</p>
+                    <button onclick="${p.stock > 0 ? `addToCart(${p.id})` : ''}" 
+                        class="w-full ${p.stock > 0 ? 'bg-gray-900 hover:bg-indigo-600' : 'bg-gray-200 cursor-not-allowed'} text-white py-4 rounded-2xl font-bold transition">
+                        ${p.stock > 0 ? 'Tambah ke Tas' : 'Stok Habis'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderAdminTable() {
+            const tableBody = document.getElementById('admin-table-body');
+            tableBody.innerHTML = products.map(p => `
+                <tr class="hover:bg-gray-50/50 transition">
+                    <td class="p-6">
+                        <input onchange="updateName(${p.id}, this.value)" type="text" value="${p.name}" class="bg-transparent font-bold text-gray-800 border-b border-transparent focus:border-indigo-500 outline-none w-full">
+                    </td>
+                    <td class="p-6 text-center">
+                        <div class="flex items-center justify-center space-x-4">
+                            <button onclick="updateStock(${p.id}, -1)" class="w-8 h-8 rounded-full bg-red-100 text-red-600 font-bold hover:bg-red-200">-</button>
+                            <span class="font-bold text-lg w-8 text-center">${p.stock}</span>
+                            <button onclick="updateStock(${p.id}, 1)" class="w-8 h-8 rounded-full bg-green-100 text-green-600 font-bold hover:bg-green-200">+</button>
+                        </div>
+                    </td>
+                    <td class="p-6">
+                        <input onchange="updatePrice(${p.id}, this.value)" type="number" value="${p.price}" class="bg-gray-100 font-bold text-gray-700 p-2 rounded-lg w-full outline-none focus:ring-2 focus:ring-indigo-500">
+                    </td>
+                    <td class="p-6 text-right">
+                        <span class="px-4 py-1.5 ${p.stock > 5 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} rounded-full text-[10px] font-black uppercase tracking-widest">
+                            ${p.stock > 5 ? 'Aman' : 'Restock'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // SISTEM KERANJANG
+        function addToCart(id) {
+            const p = products.find(i => i.id === id);
+            cart.push({...p});
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const container = document.getElementById('cart-items');
+            const totalText = document.getElementById('cart-total');
+            let total = 0;
+
+            if (cart.length === 0) {
+                container.innerHTML = '<div class="text-center mt-20"><p class="text-gray-300">Tas masih kosong.</p></div>';
+                totalText.innerText = "Rp 0";
+                return;
+            }
+
+            container.innerHTML = cart.map((item, i) => {
+                total += item.price;
+                return `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">${item.img}</div>
+                            <div>
+                                <p class="font-bold text-gray-800">${item.name}</p>
+                                <p class="text-indigo-600 font-bold text-sm">Rp ${item.price.toLocaleString('id-ID')}</p>
+                            </div>
+                        </div>
+                        <button onclick="removeFromCart(${i})" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-circle-xmark text-xl"></i></button>
+                    </div>
+                `;
+            }).join('');
+            totalText.innerText = "Rp " + total.toLocaleString('id-ID');
+        }
+
+        function removeFromCart(i) { cart.splice(i, 1); updateCartUI(); }
+        function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
+
+        // CHECKOUT KE WHATSAPP
+        function checkout() {
+            if(cart.length === 0) return alert("Pilih produk dulu!");
+
+            const phone = "62881022362914"; // Format internasional tanpa simbol +
+            let total = 0;
+            
+            // Membuat daftar barang untuk pesan
+            let itemsList = cart.map((item, index) => {
+                total += item.price;
+                return `${index + 1}. *${item.name}* - Rp ${item.price.toLocaleString('id-ID')}`;
+            }).join('%0A'); // %0A adalah kode untuk baris baru (enter) di URL
+
+            const message = `Halo Admin PARFUM.ID,%0A%0ASaya ingin memesan produk berikut:%0A${itemsList}%0A%0A*Total Pembayaran: Rp ${total.toLocaleString('id-ID')}*%0A%0AMohon info detail pembayarannya ya, terima kasih!`;
+            
+            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+            
+            // Reset keranjang setelah checkout
+            cart = [];
+            updateCartUI();
+            toggleCart();
+        }
+
+        // Pastikan modal login tertutup saat start
+        window.onload = () => {
+            document.getElementById('login-modal').classList.add('hidden');
+            renderAll();
+        };
+    </script>
